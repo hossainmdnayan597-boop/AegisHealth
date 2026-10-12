@@ -18,6 +18,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { PersonalHealthGoalsCard } from './PersonalHealthGoalsCard';
+import { InsuranceCoverageCard } from './InsuranceCoverageCard';
 
 interface OverviewDashboardProps {
   setCurrentTab: (tab: string) => void;
@@ -262,6 +263,9 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
 
       {/* Personal Health Goals & Vitals Progress Card */}
       <PersonalHealthGoalsCard />
+
+      {/* Insurance & Coverage Details Card */}
+      <InsuranceCoverageCard />
 
       {/* Main Grid: Next Appointment & Automated Reminders */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

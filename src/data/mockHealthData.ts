@@ -35,6 +35,31 @@ export const initialPatientProfile: PatientProfile = {
     address: '1420 NW Lovejoy St, Portland, OR 97209',
     phone: '+1 (555) 229-8800',
   },
+  insuranceDetails: {
+    planName: 'BlueCross BlueShield Premier Choice PPO',
+    planType: 'Comprehensive PPO Network',
+    memberId: 'EV-982410-01',
+    groupNumber: 'GRP-88319',
+    effectiveDate: '2026-01-01',
+    expirationDate: '2026-12-31',
+    eligibilityStatus: 'active',
+    deductibleMet: 500,
+    deductibleTotal: 1500,
+    outOfPocketMet: 1200,
+    outOfPocketMax: 3500,
+    copays: {
+      primaryCare: 15,
+      specialist: 25,
+      telehealth: 0,
+      urgentCare: 35,
+      emergencyRoom: 150,
+      genericRx: 5,
+      brandRx: 15,
+    },
+    rxBin: '004336',
+    rxPcn: 'ADV',
+    lastCardUploadDate: 'Sep 12, 2026 (Verified)',
+  },
 };
 
 export const availableDoctors: Doctor[] = [

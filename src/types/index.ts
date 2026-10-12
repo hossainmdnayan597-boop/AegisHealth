@@ -25,6 +25,33 @@ export interface PatientProfile {
     address: string;
     phone: string;
   };
+  insuranceDetails?: {
+    planName: string;
+    planType: string;
+    memberId: string;
+    groupNumber: string;
+    effectiveDate: string;
+    expirationDate: string;
+    eligibilityStatus: 'active' | 'pending' | 'expired';
+    deductibleMet: number;
+    deductibleTotal: number;
+    outOfPocketMet: number;
+    outOfPocketMax: number;
+    copays: {
+      primaryCare: number;
+      specialist: number;
+      telehealth: number;
+      urgentCare: number;
+      emergencyRoom: number;
+      genericRx: number;
+      brandRx: number;
+    };
+    rxBin: string;
+    rxPcn: string;
+    cardFrontUrl?: string;
+    cardBackUrl?: string;
+    lastCardUploadDate?: string;
+  };
 }
 
 export type RecordCategory = 
