@@ -1,0 +1,6 @@
+{
+  "name": "AegisHealth Connect - Patient Portal & EHR Sync",
+  "description": "Secure healthcare & patient portal featuring encrypted medical records access, appointment scheduling, provider messaging, automated reminders, FHIR-compliant multi-EHR synchronization, and real-time clinical health analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
