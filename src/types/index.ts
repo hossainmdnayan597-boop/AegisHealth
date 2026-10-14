@@ -1,4 +1,4 @@
-export type UserRole = 'patient' | 'provider';
+export type UserRole = 'patient' | 'provider' | 'admin';
 
 export interface PatientProfile {
   id: string;
@@ -61,7 +61,8 @@ export type RecordCategory =
   | 'allergy' 
   | 'visit_note' 
   | 'vital'
-  | 'imaging';
+  | 'imaging'
+  | 'referral';
 
 export interface MedicalRecord {
   id: string;
@@ -73,6 +74,15 @@ export interface MedicalRecord {
   status: 'final' | 'preliminary' | 'active' | 'resolved' | 'discontinued';
   summary: string;
   details?: Record<string, string | number | boolean>;
+  // For uploaded patient records
+  uploadedDocument?: {
+    fileName: string;
+    fileSize: string;
+    fileType: string;
+    uploadedAt: string;
+    verificationStatus: 'verified' | 'pending_review' | 'flagged';
+    filePreviewUrl?: string;
+  };
   // For lab/vitals tests
   testResults?: Array<{
     parameter: string;
@@ -251,4 +261,30 @@ export interface HealthGoal {
   notes?: string;
   lastUpdated?: string;
 }
+
+export interface AdminAuditLog {
+  id: string;
+  timestamp: string;
+  user: string;
+  role: string;
+  action: string;
+  resource: string;
+  patientId: string;
+  patientName: string;
+  status: 'authorized' | 'warning' | 'restricted';
+  ipAddress: string;
+  details: string;
+}
+
+export interface AdminSystemStats {
+  totalPatients: number;
+  activeEhrIntegrations: number;
+  pendingDocumentReviews: number;
+  messagesSentToday: number;
+  systemUptime: string;
+  encryptionStatus: string;
+  fhirComplianceRate: number;
+  unresolvedConflicts: number;
+}
+
 

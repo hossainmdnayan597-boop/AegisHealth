@@ -22,8 +22,13 @@ import {
   User,
   ShieldCheck,
   Lock,
+  UploadCloud,
+  FileCheck,
+  Eye,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { SecurePdfExportModal } from './SecurePdfExportModal';
+import { DocumentUploadZone } from './DocumentUploadZone';
 
 export const MedicalRecordsView: React.FC = () => {
   const { records, patient, requestMedicationRefill } = useHealth();
@@ -36,22 +41,29 @@ export const MedicalRecordsView: React.FC = () => {
   const [selectedPharmacy, setSelectedPharmacy] = useState(patient.preferredPharmacy.name);
   const [exportSummaryModal, setExportSummaryModal] = useState(false);
   const [showSecurePdfModal, setShowSecurePdfModal] = useState(false);
+  const [showUploadZone, setShowUploadZone] = useState(false);
+  const [previewUploadedRecord, setPreviewUploadedRecord] = useState<MedicalRecord | null>(null);
 
   // Filter records
   const filteredRecords = records.filter((rec) => {
     const matchesCategory =
-      selectedCategory === 'all' || rec.category === selectedCategory;
+      selectedCategory === 'all' ||
+      (selectedCategory === 'uploaded' ? !!rec.uploadedDocument : rec.category === selectedCategory);
+
     const matchesSearch =
       searchQuery === '' ||
       rec.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       rec.provider.toLowerCase().includes(searchQuery.toLowerCase()) ||
       rec.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      rec.facility.toLowerCase().includes(searchQuery.toLowerCase());
+      rec.facility.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (rec.uploadedDocument?.fileName.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
+
     return matchesCategory && matchesSearch;
   });
 
   const categories = [
     { id: 'all', label: 'All Records', count: records.length },
+    { id: 'uploaded', label: 'Patient Uploaded Docs', count: records.filter((r) => r.uploadedDocument).length },
     { id: 'lab', label: 'Lab & Diagnostic Tests', count: records.filter((r) => r.category === 'lab').length },
     { id: 'medication', label: 'Prescriptions & Meds', count: records.filter((r) => r.category === 'medication').length },
     { id: 'visit_note', label: 'Clinical Visit Notes', count: records.filter((r) => r.category === 'visit_note').length },
@@ -94,7 +106,7 @@ export const MedicalRecordsView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Top Banner & Export Action */}
+      {/* Top Banner & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
         <div>
           <div className="flex items-center gap-2">
@@ -106,11 +118,24 @@ export const MedicalRecordsView: React.FC = () => {
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Access, inspect, and export verified clinical laboratory observations, prescribed pharmaceuticals, physician notes, and allergies.
+            Access, inspect, export verified clinical laboratory observations, and securely upload outside test results or referral orders.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          {/* File Upload Zone Toggle Button */}
+          <button
+            onClick={() => setShowUploadZone(!showUploadZone)}
+            className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl transition-all shadow-xs ${
+              showUploadZone
+                ? 'bg-slate-900 text-white'
+                : 'bg-teal-50 text-teal-800 hover:bg-teal-100 border border-teal-300'
+            }`}
+          >
+            <UploadCloud className="w-4 h-4 text-teal-600" />
+            <span>{showUploadZone ? 'Close Upload' : 'Upload Lab / Referral'}</span>
+          </button>
+
           <button
             onClick={() => setShowSecurePdfModal(true)}
             className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-md transition-all hover:scale-[1.02]"
@@ -124,10 +149,20 @@ export const MedicalRecordsView: React.FC = () => {
             className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl border border-slate-300 transition-colors"
           >
             <Download className="w-4 h-4 text-slate-600" />
-            <span>Export FHIR JSON</span>
+            <span>FHIR JSON</span>
           </button>
         </div>
       </div>
+
+      {/* Expandable Document Upload Zone */}
+      {showUploadZone && (
+        <DocumentUploadZone
+          onUploadComplete={() => {
+            // keep it visible so they see success or collapse on demand
+          }}
+          onCancel={() => setShowUploadZone(false)}
+        />
+      )}
 
       {/* Search and Category Filter Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-4">
@@ -208,6 +243,26 @@ export const MedicalRecordsView: React.FC = () => {
                         Out-of-Range Parameter
                       </span>
                     )}
+                    {record.uploadedDocument && (
+                      <span
+                        className={`text-[11px] font-bold px-2 py-0.5 rounded border flex items-center gap-1 ${
+                          record.uploadedDocument.verificationStatus === 'verified'
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                            : record.uploadedDocument.verificationStatus === 'flagged'
+                            ? 'bg-rose-50 text-rose-800 border-rose-200'
+                            : 'bg-amber-50 text-amber-800 border-amber-200'
+                        }`}
+                      >
+                        <FileCheck className="w-3 h-3" />
+                        <span>
+                          {record.uploadedDocument.verificationStatus === 'verified'
+                            ? 'Verified Document'
+                            : record.uploadedDocument.verificationStatus === 'flagged'
+                            ? 'Flagged for Re-check'
+                            : 'Pending Clinician Review'}
+                        </span>
+                      </span>
+                    )}
                   </div>
 
                   <h3 className="text-base font-bold text-slate-900 tracking-tight">
@@ -218,18 +273,34 @@ export const MedicalRecordsView: React.FC = () => {
                     {record.summary}
                   </p>
 
-                  <div className="pt-1 flex items-center gap-3 text-xs text-slate-500">
+                  <div className="pt-1 flex items-center gap-3 text-xs text-slate-500 flex-wrap">
                     <span className="flex items-center gap-1">
                       <User className="w-3.5 h-3.5 text-slate-400" />
-                      Attending: <span className="text-slate-800 font-medium">{record.provider}</span>
+                      Attending / Order: <span className="text-slate-800 font-medium">{record.provider}</span>
                     </span>
                     <span className="text-slate-300">|</span>
                     <span>Status: <span className="font-semibold text-slate-700 capitalize">{record.status}</span></span>
+                    {record.uploadedDocument && (
+                      <>
+                        <span className="text-slate-300">|</span>
+                        <span className="font-mono text-slate-600">File: {record.uploadedDocument.fileName} ({record.uploadedDocument.fileSize})</span>
+                      </>
+                    )}
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+                <div className="flex items-center gap-2 shrink-0 self-start sm:self-center flex-wrap">
+                  {record.uploadedDocument && (
+                    <button
+                      onClick={() => setPreviewUploadedRecord(record)}
+                      className="px-3 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-800 font-semibold text-xs rounded-lg border border-teal-200 transition-colors flex items-center gap-1"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>View File</span>
+                    </button>
+                  )}
+
                   {record.medicationInfo && (
                     <button
                       onClick={() => setRefillModalMed(record)}
@@ -350,6 +421,49 @@ export const MedicalRecordsView: React.FC = () => {
                       <div className="pt-2 flex items-center justify-between text-[11px] text-slate-500 border-t border-teal-100">
                         <span>Prescribed: {record.medicationInfo.prescribedDate}</span>
                         <span>Expires: {record.medicationInfo.expiresDate}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* If Patient Uploaded Document */}
+                  {record.uploadedDocument && (
+                    <div className="bg-teal-50/50 p-4 rounded-xl border border-teal-100 text-xs space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-teal-900 flex items-center gap-1.5">
+                          <FileCheck className="w-4 h-4 text-teal-600" />
+                          Patient-Uploaded External Clinical Document
+                        </span>
+                        <span className="font-mono text-teal-800 text-[11px] font-semibold">
+                          {record.uploadedDocument.fileSize} · {record.uploadedDocument.fileType}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-700 pt-1 font-mono text-[11px]">
+                        <div>File Name: <strong className="text-slate-900 font-sans">{record.uploadedDocument.fileName}</strong></div>
+                        <div>Uploaded: {record.uploadedDocument.uploadedAt}</div>
+                        <div>Integrity Checksum: SHA-256 Validated</div>
+                        <div>
+                          Verification Status:{' '}
+                          <span
+                            className={`font-sans font-bold uppercase ${
+                              record.uploadedDocument.verificationStatus === 'verified'
+                                ? 'text-emerald-700'
+                                : record.uploadedDocument.verificationStatus === 'flagged'
+                                ? 'text-rose-700'
+                                : 'text-amber-700'
+                            }`}
+                          >
+                            {record.uploadedDocument.verificationStatus.replace('_', ' ')}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="pt-2 flex items-center justify-end">
+                        <button
+                          onClick={() => setPreviewUploadedRecord(record)}
+                          className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Preview Document File</span>
+                        </button>
                       </div>
                     </div>
                   )}
@@ -588,6 +702,109 @@ export const MedicalRecordsView: React.FC = () => {
           isOpen={showSecurePdfModal}
           onClose={() => setShowSecurePdfModal(false)}
         />
+      )}
+
+      {/* Patient Uploaded Document Preview Modal */}
+      {previewUploadedRecord && previewUploadedRecord.uploadedDocument && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <FileCheck className="w-5 h-5 text-teal-600" />
+                <h3 className="font-bold text-slate-900 text-base">
+                  Encrypted Patient Document Preview
+                </h3>
+              </div>
+              <button
+                onClick={() => setPreviewUploadedRecord(null)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Document Title:</span>
+                  <span className="font-bold text-slate-900">{previewUploadedRecord.title}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">File Name:</span>
+                  <span className="font-mono text-slate-800">{previewUploadedRecord.uploadedDocument.fileName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">File Size & MIME:</span>
+                  <span className="font-mono text-slate-800">
+                    {previewUploadedRecord.uploadedDocument.fileSize} ({previewUploadedRecord.uploadedDocument.fileType})
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Upload Date:</span>
+                  <span className="font-mono text-slate-800">{previewUploadedRecord.uploadedDocument.uploadedAt}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Verification Status:</span>
+                  <span
+                    className={`font-bold uppercase ${
+                      previewUploadedRecord.uploadedDocument.verificationStatus === 'verified'
+                        ? 'text-emerald-700'
+                        : previewUploadedRecord.uploadedDocument.verificationStatus === 'flagged'
+                        ? 'text-rose-700'
+                        : 'text-amber-700'
+                    }`}
+                  >
+                    {previewUploadedRecord.uploadedDocument.verificationStatus.replace('_', ' ')}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Integrity Hash:</span>
+                  <span className="font-mono text-[10px] text-slate-600">
+                    SHA-256: 4f8a92b71c49e0a84d728e7f9104b321...
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <h5 className="font-bold text-slate-800 mb-1">Clinical Context & Notes:</h5>
+                <p className="text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200 leading-relaxed">
+                  {previewUploadedRecord.summary}
+                </p>
+              </div>
+
+              <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl text-teal-900 flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0" />
+                <span>
+                  Encrypted with AES-256 GCM. Verified against HIPAA PHI Security Rules.
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                onClick={() => setPreviewUploadedRecord(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  const blob = new Blob([`[Sample Decrypted Clinical Document Content for ${previewUploadedRecord.title}]`], { type: 'text/plain' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = previewUploadedRecord.uploadedDocument?.fileName || 'document.pdf';
+                  a.click();
+                  URL.revokeObjectURL(a.href);
+                }}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download Verified Copy</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -7,7 +7,9 @@ import {
   AutomatedReminder,
   EhrPlatform,
   PatientAnalytics,
-  HealthGoal
+  HealthGoal,
+  AdminAuditLog,
+  AdminSystemStats
 } from '../types';
 
 export const initialPatientProfile: PatientProfile = {
@@ -524,6 +526,58 @@ export const initialMedicalRecords: MedicalRecord[] = [
       reaction: 'Maculopapular cutaneous rash',
     },
   },
+  {
+    id: 'rec-upload-01',
+    category: 'referral',
+    title: 'Outpatient Cardiology Referral & Echo Summary',
+    date: '2026-08-02',
+    provider: 'Dr. Marcus Hayes, MD',
+    facility: 'Pacific Diagnostic Cardiology Clinic',
+    status: 'final',
+    summary: 'Transthoracic echocardiogram (TTE) report uploaded by patient. LVEF 60-65%, normal diastolic filling, no valvular stenosis.',
+    uploadedDocument: {
+      fileName: 'Cardiology_TTE_Echo_Report_2026.pdf',
+      fileSize: '2.4 MB',
+      fileType: 'application/pdf',
+      uploadedAt: '2026-08-02 03:15 PM',
+      verificationStatus: 'verified',
+    },
+    details: {
+      source: 'Patient Secure Document Portal Upload',
+      reviewedBy: 'Dr. Elena Vasquez, MD (Signed & Approved)',
+    },
+  },
+  {
+    id: 'rec-upload-02',
+    category: 'lab',
+    title: 'Outside Laboratory Test — Quest Diagnostics Lipid Panel & HbA1c',
+    date: '2026-10-11',
+    provider: 'Dr. Arthur Miller, MD',
+    facility: 'Quest Diagnostics Clinical Laboratory #4490',
+    status: 'preliminary',
+    summary: 'Patient self-uploaded fasting serum lipid panel and glycated hemoglobin assay from local Quest draw center. Placed in administrative verification queue for physician review.',
+    uploadedDocument: {
+      fileName: 'Quest_Diagnostics_Lipid_Oct2026.pdf',
+      fileSize: '1.8 MB',
+      fileType: 'application/pdf',
+      uploadedAt: 'Yesterday at 04:22 PM',
+      verificationStatus: 'pending_review',
+    },
+    details: {
+      source: 'Patient Secure Document Portal Upload',
+      specimenType: 'Venous Blood Draw (12-hr Fasting)',
+      labDirector: 'Dr. Arthur Miller, MD (CLIA #05D0642999)',
+      encryption: 'AES-256-GCM Envelope',
+    },
+    fhirResource: {
+      resourceType: 'DocumentReference',
+      id: 'docref-quest-20261011',
+      code: {
+        coding: [{ system: 'http://loinc.org', code: '11502-2', display: 'Laboratory report' }],
+        text: 'Outside Lab Results: Quest Diagnostics',
+      },
+    },
+  },
 ];
 
 export const initialAppointments: Appointment[] = [
@@ -938,3 +992,96 @@ export const initialHealthGoals: HealthGoal[] = [
     lastUpdated: 'Logged this morning',
   },
 ];
+
+export const initialAdminAuditLogs: AdminAuditLog[] = [
+  {
+    id: 'log-101',
+    timestamp: '2026-10-13 11:24:18',
+    user: 'dr.elena.vasquez@stjude.org',
+    role: 'Attending Physician',
+    action: 'VIEW_RECORD',
+    resource: 'DiagnosticReport (CMP-14)',
+    patientId: 'pat-98240',
+    patientName: 'Eleanor Vance',
+    status: 'authorized',
+    ipAddress: '192.168.10.42',
+    details: 'Clinical review of Fasting Glucose (104 mg/dL) during outpatient consult.',
+  },
+  {
+    id: 'log-102',
+    timestamp: '2026-10-13 10:45:02',
+    user: 'sys.interop.gateway@cerner-fhir.com',
+    role: 'FHIR Automated Sync Gateway',
+    action: 'SYNC_RESOURCES',
+    resource: 'MedicationRequest Bundle (3 items)',
+    patientId: 'pat-98240',
+    patientName: 'Eleanor Vance',
+    status: 'authorized',
+    ipAddress: '10.240.1.18',
+    details: 'Bi-directional reconciliation of Lisinopril 10mg & Atorvastatin 20mg.',
+  },
+  {
+    id: 'log-103',
+    timestamp: '2026-10-13 09:12:35',
+    user: 'nurse.sarah.jenkins@metropolitan.org',
+    role: 'Ambulatory Triage Nurse',
+    action: 'MESSAGE_DISPATCH',
+    resource: 'Encrypted Message Thread #thread-03',
+    patientId: 'pat-98240',
+    patientName: 'Eleanor Vance',
+    status: 'authorized',
+    ipAddress: '192.168.12.88',
+    details: 'Pre-visit fasting instructions delivered via HIPAA secure messaging.',
+  },
+  {
+    id: 'log-104',
+    timestamp: '2026-10-12 18:30:11',
+    user: 'patient.eleanor.vance@connecthealth.org',
+    role: 'Patient',
+    action: 'EXPORT_SECURE_PDF',
+    resource: 'ContinuityOfCareDocument (CCD)',
+    patientId: 'pat-98240',
+    patientName: 'Eleanor Vance',
+    status: 'authorized',
+    ipAddress: '72.14.201.55',
+    details: 'AES-256 encrypted password-protected health summary exported for offline access.',
+  },
+  {
+    id: 'log-105',
+    timestamp: '2026-10-12 14:15:20',
+    user: 'patient.eleanor.vance@connecthealth.org',
+    role: 'Patient',
+    action: 'UPLOAD_DOCUMENT',
+    resource: 'PatientDocument (Echo_Report.pdf)',
+    patientId: 'pat-98240',
+    patientName: 'Eleanor Vance',
+    status: 'authorized',
+    ipAddress: '72.14.201.55',
+    details: 'External echocardiogram report uploaded to Medical Records pipeline.',
+  },
+  {
+    id: 'log-106',
+    timestamp: '2026-10-12 08:00:00',
+    user: 'cron.reminder.dispatcher@aegishealth.org',
+    role: 'System Automated Daemon',
+    action: 'TRIGGER_ALARM',
+    resource: 'AutomatedReminder #rem-01',
+    patientId: 'pat-98240',
+    patientName: 'Eleanor Vance',
+    status: 'authorized',
+    ipAddress: '127.0.0.1',
+    details: 'SMS text alert sent to +1 (555) ***-3820 for Morning Lisinopril 10mg.',
+  },
+];
+
+export const initialAdminSystemStats: AdminSystemStats = {
+  totalPatients: 2480,
+  activeEhrIntegrations: 5,
+  pendingDocumentReviews: 3,
+  messagesSentToday: 184,
+  systemUptime: '99.98%',
+  encryptionStatus: 'TLS 1.3 · AES-256 GCM Active',
+  fhirComplianceRate: 100,
+  unresolvedConflicts: 0,
+};
+

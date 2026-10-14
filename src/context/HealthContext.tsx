@@ -9,7 +9,9 @@ import {
   PatientAnalytics,
   UserRole,
   ChatMessage,
-  HealthGoal
+  HealthGoal,
+  AdminAuditLog,
+  AdminSystemStats
 } from '../types';
 import {
   initialPatientProfile,
@@ -19,7 +21,9 @@ import {
   initialReminders,
   initialEhrPlatforms,
   initialAnalytics,
-  initialHealthGoals
+  initialHealthGoals,
+  initialAdminAuditLogs,
+  initialAdminSystemStats
 } from '../data/mockHealthData';
 
 export interface ToastMessage {
@@ -62,6 +66,11 @@ interface HealthContextType {
   setGoalValue: (goalId: string, newValue: number) => void;
   addHealthGoal: (newGoal: Omit<HealthGoal, 'id' | 'lastUpdated'>) => void;
   uploadInsuranceCard: (frontUrl: string, backUrl?: string) => void;
+  auditLogs: AdminAuditLog[];
+  addAuditLog: (log: Omit<AdminAuditLog, 'id' | 'timestamp'>) => void;
+  adminStats: AdminSystemStats;
+  verifyPatientDocument: (recordId: string, status: 'verified' | 'flagged') => void;
+  deleteRecord: (recordId: string) => void;
   toasts: ToastMessage[];
   addToast: (toast: Omit<ToastMessage, 'id' | 'timestamp'>) => void;
   removeToast: (id: string) => void;
@@ -112,6 +121,16 @@ export const HealthProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return saved ? JSON.parse(saved) : initialHealthGoals;
   });
 
+  const [auditLogs, setAuditLogs] = useState<AdminAuditLog[]>(() => {
+    const saved = localStorage.getItem('aegis_audit_logs');
+    return saved ? JSON.parse(saved) : initialAdminAuditLogs;
+  });
+
+  const [adminStats, setAdminStats] = useState<AdminSystemStats>(() => {
+    const saved = localStorage.getItem('aegis_admin_stats');
+    return saved ? JSON.parse(saved) : initialAdminSystemStats;
+  });
+
   const [isSyncingEhr, setIsSyncingEhr] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -147,6 +166,14 @@ export const HealthProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     localStorage.setItem('aegis_goals', JSON.stringify(goals));
   }, [goals]);
+
+  useEffect(() => {
+    localStorage.setItem('aegis_audit_logs', JSON.stringify(auditLogs));
+  }, [auditLogs]);
+
+  useEffect(() => {
+    localStorage.setItem('aegis_admin_stats', JSON.stringify(adminStats));
+  }, [adminStats]);
 
   const addToast = (toast: Omit<ToastMessage, 'id' | 'timestamp'>) => {
     const newToast: ToastMessage = {
@@ -567,6 +594,73 @@ export const HealthProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
   };
 
+  const addAuditLog = (log: Omit<AdminAuditLog, 'id' | 'timestamp'>) => {
+    const newLog: AdminAuditLog = {
+      ...log,
+      id: 'log-' + Date.now(),
+      timestamp: new Date().toISOString().replace('T', ' ').slice(0, 19),
+    };
+    setAuditLogs((prev) => [newLog, ...prev]);
+  };
+
+  const verifyPatientDocument = (recordId: string, status: 'verified' | 'flagged') => {
+    setRecords((prev) =>
+      prev.map((r) => {
+        if (r.id === recordId && r.uploadedDocument) {
+          return {
+            ...r,
+            uploadedDocument: {
+              ...r.uploadedDocument,
+              verificationStatus: status,
+            },
+          };
+        }
+        return r;
+      })
+    );
+
+    addAuditLog({
+      user: 'admin.director@stjude.org',
+      role: 'Clinical Administrator',
+      action: status === 'verified' ? 'DOCUMENT_VERIFIED' : 'DOCUMENT_FLAGGED',
+      resource: `MedicalRecord #${recordId}`,
+      patientId: patient.id,
+      patientName: patient.name,
+      status: 'authorized',
+      ipAddress: '192.168.1.10',
+      details: `Document verification status changed to ${status}.`,
+    });
+
+    addToast({
+      type: 'success',
+      title: status === 'verified' ? 'Document Verified' : 'Document Flagged',
+      message: `Clinical document has been marked as ${status} in master chart.`,
+    });
+  };
+
+  const deleteRecord = (recordId: string) => {
+    const target = records.find((r) => r.id === recordId);
+    setRecords((prev) => prev.filter((r) => r.id !== recordId));
+    if (target) {
+      addAuditLog({
+        user: 'admin.director@stjude.org',
+        role: 'Clinical Administrator',
+        action: 'DELETE_RECORD',
+        resource: target.title,
+        patientId: patient.id,
+        patientName: patient.name,
+        status: 'authorized',
+        ipAddress: '192.168.1.10',
+        details: `Deleted record ${target.title} from active chart index.`,
+      });
+      addToast({
+        type: 'info',
+        title: 'Record Removed',
+        message: `${target.title} was removed from the active records list.`,
+      });
+    }
+  };
+
   return (
     <HealthContext.Provider
       value={{
@@ -601,6 +695,11 @@ export const HealthProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setGoalValue,
         addHealthGoal,
         uploadInsuranceCard,
+        auditLogs,
+        addAuditLog,
+        adminStats,
+        verifyPatientDocument,
+        deleteRecord,
         toasts,
         addToast,
         removeToast,
